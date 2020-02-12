@@ -85,7 +85,7 @@ p1_dat <- all_estimates %>%
          var=factor(var_trans[var], levels=var_trans),
          sign=ifelse(log2FoldChange<0, "-", "+"),
          lab=paste(sign,gsub("[a-z]__","",tax)),
-         tax_level=factor(tax_level, levels=c("Cl_cluster", "Phylum","Family","Genus","Species",
+         tax_level=factor(tax_level, levels=c("Phylum","Family","Genus","Species",
                                               "OTU"))) %>%
   filter(!tax_level %in% c("OTU"))%>%
   select(id, tax,var, x, sign, lab,tax_level, lfc=log2FoldChange)
@@ -115,7 +115,14 @@ svg(filename="svg/phylo_allpheno.svg", width = 3.5,hei=7); p2; dev.off()
 ####################################
 
 #lump measures together what have no log10 svalues greater than 3
-lump <- p1_dat %>% group_by(var) %>% summarize(m=max(x)) %>% filter(m<3) %>% pull(var)%>% as.character
+lump <- p1_dat %>% 
+  group_by(var) %>% 
+  summarize(m=max(x)) %>% 
+  filter(m<3) %>% 
+  pull(var) %>% 
+  as.character
+
+#dot plot
 p1b <- p1_dat %>%
   mutate(lab=ifelse(x>3,lab,NA),
          lab=gsub("\\[|\\]","", lab),
@@ -135,4 +142,7 @@ p1b <- p1_dat %>%
   guides(color=guide_legend(title="Biomarker"),
          shape=guide_legend(title="Taxonomic rank"))
 
-svg(filename = "svg/manhattan.svg", width=11, height=5); p1b; dev.off()
+svg(filename = "svg/Figure2.svg", width=11, height=5); p1b; dev.off()
+
+#save data assembly
+save(all_estimates, p1_dat, file="all_estimates.Rda")
