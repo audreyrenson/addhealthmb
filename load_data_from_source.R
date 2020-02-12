@@ -242,13 +242,27 @@ rna_infl  <- rna_infl[, rna_infl[["AID"]] %in% sample_names(pseq)]
 pseq_subset <- prune_samples(sample_names(pseq) %in% rna_infl[["AID"]],
                              pseq)
 
+#create a variable translator, for labeling plots etc.
+var_trans <- c(ldl="LDL",hdl="HDL",
+               glu_dec="Glucose",hba1c="HbA1c",
+               log_crp="CRP",infl="Hallmark Inflammation",
+               n_vs_e_cd8="Naive vs. Effector CD8+",
+               cd4_cd8="CD4+ vs. CD8+",
+               th1_vs_n="Th1 vs. Naive CD4+",
+               treg_vs_n="Treg vs. Naive CD4+",
+               klrg1_vs_n="KLRG1 high vs. Naive CD8+",
+               cd57_nk="CD57+ vs. - NK",
+               hm_ros="Hallmark ROS",
+               hm_dna="Hallmark DNA Repair",
+               rna_age="Transcriptomic Age")
+
 #########################
 # 5. Save and cleanup   #
 #########################
 save(rna, rna_infl, rna_clr, 
      gene_sets, df_rna, 
      pseq, pseq_subset, otu, otu_clr,
-     ah, data_dict, 
+     ah, data_dict, var_trans,
      file = "gut_load_data_7.25.19.Rda")
 
 rm(list=ls())
