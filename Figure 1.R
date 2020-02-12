@@ -46,7 +46,7 @@ plot_priors <- priors %>%
   theme(legend.position = "none") +
   guides(color=guide_legend(label.position = "left", title.hjust = 1))
 
-svg(filename = "svg/plot_priors.svg", height=4, width=6); plot_priors; dev.off()
+svg(filename = "svg/Figure1.svg", height=4, width=6); plot_priors; dev.off()
 
 
 #get MLE estimates, for discussion
