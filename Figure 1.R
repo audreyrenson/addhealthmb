@@ -2,6 +2,7 @@ load("deseq2_results.Rda")
 
 library(tidyverse)
 library(ggrepel)
+theme_set(theme_minimal())
 
 #function to sample from a prior distribution
 sample_from_g <- function(g, R=1e5) {
