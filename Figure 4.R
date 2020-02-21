@@ -9,59 +9,6 @@ load("network.Rda")
 # 1. Assemble Data for Plot #
 #############################
 
-plot_graph <- all_graphs$Final
-
-#attach shapes
-V(plot_graph)$shape<- ifelse(grepl("^[a-z]__", V(plot_graph)$name), 
-                             "OTU", "Gene")
-
-#attach louvain clusters
-V(plot_graph)$cluster <- cluster_membership[V(plot_graph)$name]
-
-#attach covariances
-E(plot_graph)$cov <- formatC(cov_edges[attr(E(plot_graph),"vnames")],digits=2,format="f")
-E(plot_graph)$sign_cov <- ifelse(sign(as.numeric(E(plot_graph)$cov))==-1,"neg","pos")
-
-#attach degree
-V(plot_graph)$degree <- igraph::degree(plot_graph)
-
-#create labels
-df_labels <- data.frame(cl=V(plot_graph)$cluster, 
-                        deg=V(plot_graph)$degree, 
-                        type=V(plot_graph)$shape,
-                        name=V(plot_graph)$name)%>%
-  #create taxonomically meaninful labels for OTUs
-  left_join(tax_table(pseq_network)@.Data %>% 
-              gsub("[a-z]__", "", .) %>%
-              as.data.frame %>% 
-              tibble::rownames_to_column("name") %>%
-              mutate(label = case_when(Species != "" ~ paste0(Genus, " ", Species),
-                                       Genus != "" ~ paste0(Genus, " sp."),
-                                       Family != "" ~ paste0("Family ", Family, " sp."),
-                                       Order != "" ~ paste0("Order ", Order, " sp."))) %>%
-              select(name, label)) %>%
-  group_by(label) %>%
-  #create roman numerals for duplicate named OTUs
-  mutate(num=row_number(),
-         rom=tolower(as.character(utils::as.roman(num))),
-         n=n(), add_roman=n>1 & type=="OTU") %>%
-  ungroup %>%
-  mutate(label=ifelse(add_roman, paste0(label, " (", rom ,")"), label)) %>%
-  #give OTUs numbers for graph labeling
-  mutate(label_num=as.numeric(fct_reorder(label, deg, .desc=TRUE))) %>%
-  #carry over gene name from 'name'
-  mutate(label=ifelse(is.na(label), name, label)) %>%
-  arrange(cl,desc(deg)) %>%
-  select(-num:-add_roman) %>%
-  set_rownames(.$name) 
-
-
-#add labels to graph
-V(plot_graph)$label = df_labels[V(plot_graph)$name, "label",drop=TRUE]
-V(plot_graph)$label_num = df_labels[V(plot_graph)$name, "label_num",drop=TRUE]
-V(plot_graph)$label_gene = ifelse(V(plot_graph)$shape=="Gene", 
-                                  df_labels[V(plot_graph)$name, "label",drop=TRUE], NA)
-
 #Keep a label if (a) it is a gene, (b) it shares an edge with a gene, (c) it shares 
 #an edge with a node that shares an edge with a gene, or (d) it has top degree
 subgraphs <- map(paste0("A",1:5) %>% set_names(.,.), 
@@ -123,4 +70,4 @@ figure4 <- imap(subgraphs,
                        labs(caption=stringr::str_wrap(plot_abbreviations[[.y]],
                                                       width = ifelse(.y %in% c("A1","A3"),80,50))))
 
-svg(filename = "svg/net_subplots.svg", height=10, width=10); (figure4$A1 | figure4$A3) / (figure4$A2 | figure4$A4 |figure4$A5) + plot_annotation(tag_levels = "1", tag_prefix = "A"); dev.off()
+svg(filename = "svg/Figure4.svg", height=10, width=10); (figure4$A1 | figure4$A3) / (figure4$A2 | figure4$A4 |figure4$A5) + plot_annotation(tag_levels = "1", tag_prefix = "A"); dev.off()

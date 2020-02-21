@@ -219,6 +219,73 @@ df_louvain <- data.frame(cluster_id=as.character(louvain$membership),
 
 cluster_membership <- set_names(df_louvain$c_name, df_louvain$v)
 
-#save all network results
-save(all_graphs,huge_cov,cov_edges, louvain, df_louvain, cluster_membership,
-     pseq_network,file = "network.Rda")
+##############################
+# 4. Assemble Data for Plots #
+##############################
+
+plot_graph <- all_graphs$Final
+
+#attach shapes
+V(plot_graph)$shape<- ifelse(grepl("^[a-z]__", V(plot_graph)$name), 
+                             "OTU", "Gene")
+
+#attach louvain clusters
+V(plot_graph)$cluster <- cluster_membership[V(plot_graph)$name]
+
+#attach covariances
+E(plot_graph)$cov <- formatC(cov_edges[attr(E(plot_graph),"vnames")],digits=2,format="f")
+E(plot_graph)$sign_cov <- ifelse(sign(as.numeric(E(plot_graph)$cov))==-1,"neg","pos")
+
+#attach degree
+V(plot_graph)$degree <- igraph::degree(plot_graph)
+
+#edge weights, to highlight clusters
+E(plot_graph)$weight <- edge.weights(louvain, plot_graph, weight.within = 100)
+
+#create labels
+df_labels <- data.frame(cl=V(plot_graph)$cluster, 
+                        deg=V(plot_graph)$degree, 
+                        type=V(plot_graph)$shape,
+                        name=V(plot_graph)$name)%>%
+  #create taxonomically meaninful labels for OTUs
+  left_join(tax_table(pseq_network)@.Data %>% 
+              gsub("[a-z]__", "", .) %>%
+              as.data.frame %>% 
+              tibble::rownames_to_column("name") %>%
+              mutate(label = case_when(Species != "" ~ paste0(Genus, " ", Species),
+                                       Genus != "" ~ paste0(Genus, " sp."),
+                                       Family != "" ~ paste0("Family ", Family, " sp."),
+                                       Order != "" ~ paste0("Order ", Order, " sp."))) %>%
+              select(name, label)) %>%
+  group_by(label) %>%
+  #create roman numerals for duplicate named OTUs
+  mutate(num=row_number(),
+         rom=tolower(as.character(utils::as.roman(num))),
+         n=n(), add_roman=n>1 & type=="OTU") %>%
+  ungroup %>%
+  mutate(label=ifelse(add_roman, paste0(label, " (", rom ,")"), label)) %>%
+  #give OTUs numbers for graph labeling
+  mutate(label_num=as.numeric(fct_reorder(label, deg, .desc=TRUE))) %>%
+  #carry over gene name from 'name'
+  mutate(label=ifelse(is.na(label), name, label)) %>%
+  arrange(cl,desc(deg)) %>%
+  select(-num:-add_roman) %>%
+  set_rownames(.$name) 
+
+
+#add labels to graph
+V(plot_graph)$label = df_labels[V(plot_graph)$name, "label",drop=TRUE]
+V(plot_graph)$label_num = df_labels[V(plot_graph)$name, "label_num",drop=TRUE]
+V(plot_graph)$label_gene = ifelse(V(plot_graph)$shape=="Gene", 
+                                  df_labels[V(plot_graph)$name, "label",drop=TRUE], NA)
+
+#drop clusters with less than 3
+V(plot_graph)$cluster[V(plot_graph)$cluster %in% df_labels$cl[df_labels$n<3]] <- NA
+
+###############################
+# 5. Save all network results #
+###############################
+
+save(all_graphs, plot_graph, df_labels, 
+     huge_cov, cov_edges,  louvain, df_louvain, 
+     cluster_membership, pseq_network, file = "network.Rda")
