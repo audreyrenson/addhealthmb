@@ -1,4 +1,4 @@
-# addhealthmb
+# eTables and R code for 'Early signals of gut microbiome aging: immune and cardiometabolic phenotypes in young adulthood'.
 
 This repository contains eTables and R code used to perform the statistical analysis for the following article: 
 
